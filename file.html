@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Download File</title>
+<style>
+body {font-family:Arial;background:#0f172a;color:white;text-align:center;padding:50px;}
+.box {background:#1e293b;padding:30px;border-radius:15px;max-width:500px;margin:auto;}
+button {padding:12px 25px;background:#22c55e;border:none;color:white;border-radius:8px;cursor:pointer;font-size:16px;}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h2 id="filename">Loading...</h2>
+<p id="filesize"></p>
+<button id="downloadBtn">Download</button>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+
+if(!id){
+  document.body.innerHTML = "File tidak ditemukan.";
+}
+
+async function loadFile(){
+  const res = await fetch(`https://api.gofile.io/getContent?contentId=${id}`);
+  const data = await res.json();
+
+  if(data.status === "ok"){
+    const file = Object.values(data.data.contents)[0];
+    document.getElementById("filename").innerText = file.name;
+    document.getElementById("filesize").innerText = "Size: " + (file.size/1024/1024).toFixed(2) + " MB";
+
+    document.getElementById("downloadBtn").onclick = () => {
+      window.location.href = file.link;
+    };
+  } else {
+    document.body.innerHTML = "File tidak tersedia.";
+  }
+}
+
+loadFile();
+</script>
+
+</body>
+</html>
