@@ -1,146 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>MyUpload - Powered by GoFile</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 40px;
-    }
-    h1 { margin-bottom: 30px; }
-    .upload-box {
-      border: 2px dashed #22c55e;
-      padding: 40px;
-      border-radius: 15px;
-      cursor: pointer;
-      background: #1e293b;
-      transition: 0.3s;
-    }
-    .upload-box:hover {
-      background: #273549;
-    }
-    input { display: none; }
-    .file-item {
-      margin-top: 20px;
-      background: #1e293b;
-      padding: 15px;
-      border-radius: 10px;
-      text-align: left;
-    }
-    .progress {
-      height: 8px;
-      background: #334155;
-      border-radius: 5px;
-      margin-top: 8px;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: #22c55e;
-      transition: width 0.3s;
-    }
-    a {
-      color: #22d3ee;
-      word-break: break-all;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>MyUpload</title>
+<style>
+body {font-family:Arial;background:#0f172a;color:white;text-align:center;padding:40px;}
+.upload-box {border:2px dashed #22c55e;padding:40px;border-radius:15px;background:#1e293b;cursor:pointer;}
+input {display:none;}
+.file-item {margin-top:20px;background:#1e293b;padding:15px;border-radius:10px;}
+a {color:#22d3ee;word-break:break-all;}
+</style>
 </head>
 <body>
 
-<h1>🚀 MyUpload (GoFile)</h1>
+<h1>🚀 Upload File</h1>
 
-<div class="upload-box" id="dropArea">
-  Drag & Drop Files Here or Click to Select
-  <input type="file" id="fileInput" multiple>
+<div class="upload-box" onclick="fileInput.click()">
+Click or Drag File
+<input type="file" id="fileInput">
 </div>
 
-<div id="fileList"></div>
+<div id="result"></div>
 
 <script>
-const dropArea = document.getElementById("dropArea");
 const fileInput = document.getElementById("fileInput");
-const fileList = document.getElementById("fileList");
+const result = document.getElementById("result");
 
-dropArea.addEventListener("click", () => fileInput.click());
-dropArea.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  dropArea.style.background = "#334155";
-});
-dropArea.addEventListener("dragleave", () => {
-  dropArea.style.background = "#1e293b";
-});
-dropArea.addEventListener("drop", (e) => {
-  e.preventDefault();
-  dropArea.style.background = "#1e293b";
-  handleFiles(e.dataTransfer.files);
-});
-fileInput.addEventListener("change", () => {
-  handleFiles(fileInput.files);
-});
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if(!file) return;
 
-async function getServer() {
-  const res = await fetch("https://api.gofile.io/servers");
-  const data = await res.json();
-  return data.data.servers[0].name;
-}
+  result.innerHTML = "Uploading...";
 
-function handleFiles(files) {
-  [...files].forEach(file => uploadFile(file));
-}
-
-async function uploadFile(file) {
-  const fileItem = document.createElement("div");
-  fileItem.className = "file-item";
-  fileItem.innerHTML = `
-    <strong>${file.name}</strong>
-    <div class="progress"><div class="progress-bar"></div></div>
-    <div class="link"></div>
-  `;
-  fileList.appendChild(fileItem);
-
-  const progressBar = fileItem.querySelector(".progress-bar");
-  const linkDiv = fileItem.querySelector(".link");
-
-  const server = await getServer();
+  const serverRes = await fetch("https://api.gofile.io/servers");
+  const serverData = await serverRes.json();
+  const server = serverData.data.servers[0].name;
 
   const formData = new FormData();
   formData.append("file", file);
 
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", `https://${server}.gofile.io/uploadFile`);
+  const uploadRes = await fetch(`https://${server}.gofile.io/uploadFile`, {
+    method: "POST",
+    body: formData
+  });
 
-  xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-      const percent = (e.loaded / e.total) * 100;
-      progressBar.style.width = percent + "%";
-    }
-  };
+  const uploadData = await uploadRes.json();
 
-  xhr.onload = () => {
-    try {
-      const response = JSON.parse(xhr.responseText);
-      if (response.status === "ok") {
-        const link = response.data.downloadPage;
-        linkDiv.innerHTML = `<br>Link: <a href="${link}" target="_blank">${link}</a>`;
-      } else {
-        linkDiv.innerHTML = "<br>Upload gagal.";
-      }
-    } catch {
-      linkDiv.innerHTML = "<br>Error parsing response.";
-    }
-  };
-
-  xhr.onerror = () => {
-    linkDiv.innerHTML = "<br>Error upload.";
-  };
-
-  xhr.send(formData);
-}
+  if(uploadData.status === "ok") {
+    const fileId = uploadData.data.fileId;
+    const customLink = window.location.origin + "/file.html?id=" + fileId;
+    result.innerHTML = "Link: <br><a href='"+customLink+"' target='_blank'>"+customLink+"</a>";
+  } else {
+    result.innerHTML = "Upload gagal.";
+  }
+});
 </script>
 
 </body>
