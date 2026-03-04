@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>MyUpload - Free File Hosting</title>
+  <title>MyUpload - Powered by GoFile</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
     }
     h1 { margin-bottom: 30px; }
     .upload-box {
-      border: 2px dashed #3b82f6;
+      border: 2px dashed #22c55e;
       padding: 40px;
       border-radius: 15px;
       cursor: pointer;
@@ -41,7 +41,7 @@
     .progress-bar {
       height: 100%;
       width: 0%;
-      background: #3b82f6;
+      background: #22c55e;
       transition: width 0.3s;
     }
     a {
@@ -52,7 +52,7 @@
 </head>
 <body>
 
-<h1>🚀 MyUpload</h1>
+<h1>🚀 MyUpload (GoFile)</h1>
 
 <div class="upload-box" id="dropArea">
   Drag & Drop Files Here or Click to Select
@@ -67,25 +67,27 @@ const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 
 dropArea.addEventListener("click", () => fileInput.click());
-
 dropArea.addEventListener("dragover", (e) => {
   e.preventDefault();
   dropArea.style.background = "#334155";
 });
-
 dropArea.addEventListener("dragleave", () => {
   dropArea.style.background = "#1e293b";
 });
-
 dropArea.addEventListener("drop", (e) => {
   e.preventDefault();
   dropArea.style.background = "#1e293b";
   handleFiles(e.dataTransfer.files);
 });
-
 fileInput.addEventListener("change", () => {
   handleFiles(fileInput.files);
 });
+
+async function getServer() {
+  const res = await fetch("https://api.gofile.io/servers");
+  const data = await res.json();
+  return data.data.servers[0].name;
+}
 
 function handleFiles(files) {
   [...files].forEach(file => uploadFile(file));
@@ -104,11 +106,13 @@ async function uploadFile(file) {
   const progressBar = fileItem.querySelector(".progress-bar");
   const linkDiv = fileItem.querySelector(".link");
 
+  const server = await getServer();
+
   const formData = new FormData();
   formData.append("file", file);
 
   const xhr = new XMLHttpRequest();
-  xhr.open("POST", "https://pixeldrain.com/api/file");
+  xhr.open("POST", `https://${server}.gofile.io/uploadFile`);
 
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
@@ -118,12 +122,16 @@ async function uploadFile(file) {
   };
 
   xhr.onload = () => {
-    const response = JSON.parse(xhr.responseText);
-    if (response.success) {
-      const link = "https://pixeldrain.com/u/" + response.id;
-      linkDiv.innerHTML = `<br>Link: <a href="${link}" target="_blank">${link}</a>`;
-    } else {
-      linkDiv.innerHTML = "<br>Upload gagal.";
+    try {
+      const response = JSON.parse(xhr.responseText);
+      if (response.status === "ok") {
+        const link = response.data.downloadPage;
+        linkDiv.innerHTML = `<br>Link: <a href="${link}" target="_blank">${link}</a>`;
+      } else {
+        linkDiv.innerHTML = "<br>Upload gagal.";
+      }
+    } catch {
+      linkDiv.innerHTML = "<br>Error parsing response.";
     }
   };
 
